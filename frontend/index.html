@@ -4,74 +4,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notes Summarizer</title>
+    <title>AI Study Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
         body {
-            font-family: sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Inter', sans-serif;
         }
 
-        textarea {
-            width: 100%;
-            height: 150px;
-            margin-bottom: 10px;
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
         }
 
-        button:hover {
-            background-color: #0056b3;
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
         }
 
-        #result {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 
-<body>
-    <h1>Notes Summarizer</h1>
-    <textarea id="notes" placeholder="Enter your text here..."></textarea>
-    <br>
-    <button onclick="summarize()">Summarize</button>
-    <div id="result"></div>
+<body class="bg-[#0b1120] text-slate-200 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-[#0b1120] p-4 flex items-center justify-between shrink-0 z-10">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                    </path>
+                </svg>
+            </div>
+            <h1 class="font-semibold text-lg tracking-tight text-white">AI Study Assistant</h1>
+        </div>
+        <div class="text-xs text-slate-500 font-medium px-3 py-1 bg-slate-900 rounded-full border border-slate-800">
+            Powered by Ollama (Phi)
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+
+        <!-- Left Panel: Input & Actions -->
+        <div class="w-full md:w-[45%] lg:w-[40%] flex flex-col border-r border-slate-800 bg-[#0b1120] relative z-0">
+            <div class="flex-1 p-6 overflow-y-auto">
+                <label class="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">Source
+                    Material</label>
+                <textarea id="notes"
+                    class="w-full h-[calc(100vh-280px)] bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all resize-none leading-relaxed text-sm"
+                    placeholder="Paste your lecture notes, textbook chapters, or articles here..."></textarea>
+                <div class="text-right text-xs text-slate-600 mt-2" id="charCount">0 characters</div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="p-6 border-t border-slate-800 bg-[#0b1120]/95 backdrop-blur-sm">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="generateSummary()"
+                        class="btn-primary group relative overflow-hidden bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-lg font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98]">
+                        <span class="relative z-10 flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16m-7 6h7"></path>
+                            </svg>
+                            Summarize
+                        </span>
+                    </button>
+                    <button onclick="generateQuickRevision()"
+                        class="btn-secondary bg-slate-800 hover:bg-slate-700 text-slate-200 p-3 rounded-lg font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] border border-slate-700">
+                        <span class="flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            1-Min Revision
+                        </span>
+                    </button>
+                    <button onclick="generateQuiz()"
+                        class="btn-secondary col-span-2 bg-slate-800 hover:bg-slate-700 text-slate-200 p-3 rounded-lg font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] border border-slate-700">
+                        <span class="flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                </path>
+                            </svg>
+                            Generate Quiz
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Output -->
+        <div class="flex-1 bg-[#0f172a] overflow-y-auto relative p-6 md:p-8" id="rightPanel">
+
+            <!-- Welcome State -->
+            <div id="welcomeState" class="flex flex-col items-center justify-center h-full text-slate-500">
+                <div
+                    class="w-16 h-16 bg-slate-800/50 rounded-2xl flex items-center justify-center mb-4 border border-slate-700/50">
+                    <svg class="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                        </path>
+                    </svg>
+                </div>
+                <p class="text-sm font-medium">Select an action to start studying</p>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loading"
+                class="hidden absolute inset-0 bg-[#0f172a]/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                <div class="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4">
+                </div>
+                <p class="text-indigo-400 font-medium text-sm animate-pulse">Analyzing notes...</p>
+            </div>
+
+            <!-- Summary Section -->
+            <div id="summarySection" class="hidden fade-in max-w-2xl mx-auto">
+                <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-indigo-500 rounded-full"></span> Summary
+                </h2>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-sm">
+                    <p id="summaryText" class="text-slate-300 leading-7 whitespace-pre-wrap text-sm"></p>
+                </div>
+            </div>
+
+            <!-- Quick Revision Section -->
+            <div id="quickSection" class="hidden fade-in max-w-2xl mx-auto">
+                <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <span class="w-1 h-6 bg-yellow-500 rounded-full"></span> 1-Minute Revision
+                </h2>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-sm space-y-6">
+                    <div id="quickContent" class="text-slate-300 text-sm space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- Quiz Section -->
+            <div id="quizSection" class="hidden fade-in max-w-2xl mx-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+                        <span class="w-1 h-6 bg-green-500 rounded-full"></span> Quiz
+                    </h2>
+                    <span
+                        class="text-xs font-medium px-2 py-1 bg-slate-800 rounded border border-slate-700 text-slate-400">5
+                        Questions</span>
+                </div>
+
+                <div id="quizContainer" class="space-y-6"></div>
+
+                <button id="submitBtn" onclick="submitQuiz()"
+                    class="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
+                    Submit Answers
+                </button>
+            </div>
+
+            <!-- Score Section -->
+            <div id="scoreSection" class="hidden fade-in mt-6 text-center max-w-lg mx-auto">
+                <div class="p-6 bg-slate-800 rounded-2xl border border-slate-700 shadow-xl mb-6">
+                    <h2 class="text-sm uppercase tracking-wide text-slate-400 font-semibold mb-2">Assessment Result</h2>
+                    <p id="scoreText" class="text-4xl font-bold text-white mb-2"></p>
+                    <div class="h-1.5 w-32 bg-slate-700 rounded-full mx-auto overflow-hidden">
+                        <div id="scoreBar" class="h-full bg-green-500 rounded-full w-0 transition-all duration-1000">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weak Area Revision -->
+                <div id="weakSection" class="hidden p-6 bg-red-900/10 rounded-2xl border border-red-900/20 text-left">
+                    <h3 class="text-sm font-bold text-red-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
+                        Focus Areas
+                    </h3>
+                    <p id="weakText" class="text-slate-300 text-sm leading-relaxed"></p>
+                </div>
+            </div>
+
+        </div>
+    </main>
 
     <script>
-        async function summarize() {
-            const text = document.getElementById('notes').value;
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerText = "Summarizing...";
+        let currentQuestions = [];
+        const API_BASE = 'http://127.0.0.1:8000';
+        const notesInput = document.getElementById('notes');
+        const charCount = document.getElementById('charCount');
 
+        // Character counting
+        notesInput.addEventListener('input', () => {
+            charCount.innerText = `${notesInput.value.length} characters`;
+        });
+
+        async function generateSummary() {
+            const text = notesInput.value;
+            if (!text) return alert("Please enter notes first.");
+
+            resetUI();
+            showLoading(true);
             try {
-                const response = await fetch('http://127.0.0.1:8000/summarize', {
+                const response = await fetch(`${API_BASE}/summarize`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text })
                 });
-
                 const data = await response.json();
-                if (data.summary) {
-                    resultDiv.innerText = "Summary: " + data.summary;
-                } else {
-                    resultDiv.innerText = "Error: " + JSON.stringify(data);
-                }
+
+                if (!response.ok) throw new Error(data.detail || "Server Error");
+
+                document.getElementById('summaryText').innerText = data.summary;
+                document.getElementById('summarySection').classList.remove('hidden');
             } catch (error) {
-                resultDiv.innerText = "Network Error: " + error.message;
+                alert("Error: " + error.message);
+            } finally {
+                showLoading(false);
             }
+        }
+
+        async function generateQuickRevision() {
+            const text = notesInput.value;
+            resetUI();
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE}/quick-revision`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text || " " })
+                });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.detail || "Server Error");
+
+                let html = '<div class="space-y-2"><h3 class="text-indigo-400 font-medium text-xs uppercase tracking-wide">Key Points</h3><ul class="list-disc pl-4 space-y-1 marker:text-indigo-500">';
+                data.bullets.forEach(b => html += `<li>${b}</li>`);
+                html += '</ul></div>';
+
+                html += '<div class="space-y-2 pt-2 border-t border-slate-700/50"><h3 class="text-pink-400 font-medium text-xs uppercase tracking-wide">Memory Tricks</h3><ul class="list-disc pl-4 space-y-1 marker:text-pink-500">';
+                data.tricks.forEach(t => html += `<li>${t}</li>`);
+                html += '</ul></div>';
+
+                html += `<div class="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50 mt-4"><h3 class="text-slate-400 font-medium text-xs uppercase tracking-wide mb-1">Recap</h3><p class="text-slate-200">${data.recap}</p></div>`;
+
+                document.getElementById('quickContent').innerHTML = html;
+                document.getElementById('quickSection').classList.remove('hidden');
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function generateQuiz() {
+            const text = notesInput.value;
+            resetUI();
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE}/generate-quiz`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text || " " })
+                });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.detail || "Server Error");
+
+                currentQuestions = data;
+                renderQuiz(currentQuestions);
+                document.getElementById('quizSection').classList.remove('hidden');
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderQuiz(questions) {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = '';
+            document.getElementById('submitBtn').classList.remove('hidden');
+
+            questions.forEach((q, index) => {
+                const qDiv = document.createElement('div');
+                qDiv.className = "p-5 bg-slate-800 rounded-xl border border-slate-700 transition-all hover:border-slate-600";
+                qDiv.id = `question-block-${index}`;
+
+                const qTitle = document.createElement('p');
+                qTitle.className = "font-medium text-slate-100 mb-4 text-sm md:text-base";
+                qTitle.innerText = `${index + 1}. ${q.question}`;
+                qDiv.appendChild(qTitle);
+
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = "space-y-2";
+
+                q.options.forEach((opt, optIndex) => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center p-3 rounded-lg border border-slate-700/50 cursor-pointer hover:bg-slate-700/50 transition-colors text-sm text-slate-300";
+                    label.id = `label-${index}-${optIndex}`;
+
+                    const radio = document.createElement('input');
+                    radio.type = "radio";
+                    radio.name = `question-${index}`;
+                    radio.value = optIndex;
+                    radio.className = "mr-3 text-indigo-500 focus:ring-indigo-500/30 bg-slate-700 border-slate-600";
+
+                    label.appendChild(radio);
+                    label.appendChild(document.createTextNode(opt));
+                    optionsDiv.appendChild(label);
+                });
+                qDiv.appendChild(optionsDiv);
+
+                // Feedback
+                const feedback = document.createElement('div');
+                feedback.id = `feedback-${index}`;
+                feedback.className = "mt-3 text-sm font-medium hidden pl-1";
+                qDiv.appendChild(feedback);
+
+                container.appendChild(qDiv);
+            });
+        }
+
+        async function submitQuiz() {
+            const answers = [];
+            currentQuestions.forEach((_, index) => {
+                const selected = document.querySelector(`input[name="question-${index}"]:checked`);
+                answers.push(selected ? parseInt(selected.value) : -1);
+            });
+
+            const correctAnswers = currentQuestions.map(q => q.correct_index);
+
+            showLoading(true);
+            document.getElementById('submitBtn').classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/check-answers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers: answers, correct_answers: correctAnswers })
+                });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.detail || "Server Error");
+
+                // Show Score
+                document.getElementById('scoreText').innerText = `${data.score} / ${data.total}`;
+
+                // Score Bar
+                const percentage = (data.score / data.total) * 100;
+                const scoreBar = document.getElementById('scoreBar');
+                scoreBar.style.width = `${percentage}%`;
+                scoreBar.className = `h-full rounded-full transition-all duration-1000 ${percentage >= 70 ? 'bg-green-500' : percentage >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`;
+
+                document.getElementById('scoreSection').classList.remove('hidden');
+
+                // Visual Feedback & Weak Topic Collection
+                const weakTopics = [];
+                currentQuestions.forEach((q, index) => {
+                    const userAns = answers[index];
+                    const correctAns = q.correct_index;
+                    const feedbackDiv = document.getElementById(`feedback-${index}`);
+
+                    // Highlight correct
+                    const correctLabel = document.getElementById(`label-${index}-${correctAns}`);
+                    correctLabel.classList.add("bg-green-900/20", "border-green-500/50", "text-green-300");
+
+                    if (userAns === correctAns) {
+                        feedbackDiv.innerText = "Correct!";
+                        feedbackDiv.className = "mt-3 text-xs font-bold text-green-400 uppercase tracking-wider";
+                    } else {
+                        feedbackDiv.innerText = `Correct: ${q.options[correctAns]}`;
+                        feedbackDiv.className = "mt-3 text-xs font-bold text-red-400 uppercase tracking-wider";
+
+                        if (userAns !== -1) {
+                            const wrongLabel = document.getElementById(`label-${index}-${userAns}`);
+                            wrongLabel.classList.add("bg-red-900/20", "border-red-500/50", "text-red-300");
+                        }
+
+                        if (q.topic) weakTopics.push(q.topic);
+                    }
+                    feedbackDiv.classList.remove('hidden');
+
+                    // Disable radios
+                    document.querySelectorAll(`input[name="question-${index}"]`).forEach(r => r.disabled = true);
+                });
+
+                // Fetch Weak Revision if needed
+                if (weakTopics.length > 0) {
+                    fetchWeakRevision(weakTopics);
+                } else {
+                    document.getElementById('weakSection').classList.add('hidden');
+                }
+
+            } catch (error) {
+                alert("Error: " + error.message);
+                document.getElementById('submitBtn').classList.remove('hidden');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function fetchWeakRevision(topics) {
+            try {
+                const response = await fetch(`${API_BASE}/weak-revision`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ weak_topics: topics })
+                });
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.detail || "Server Error");
+
+                document.getElementById('weakText').innerText = data.revision_text;
+                document.getElementById('weakSection').classList.remove('hidden');
+            } catch (e) {
+                console.error("Weak revision error", e);
+            }
+        }
+
+        function showLoading(show) {
+            const loader = document.getElementById('loading');
+            if (show) loader.classList.remove('hidden');
+            else loader.classList.add('hidden');
+        }
+
+        function resetUI() {
+            document.getElementById('welcomeState').classList.add('hidden');
+            document.getElementById('summarySection').classList.add('hidden');
+            document.getElementById('quickSection').classList.add('hidden');
+            document.getElementById('quizSection').classList.add('hidden');
+            document.getElementById('scoreSection').classList.add('hidden');
+            document.getElementById('weakSection').classList.add('hidden');
         }
     </script>
 </body>
