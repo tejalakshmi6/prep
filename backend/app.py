@@ -48,7 +48,11 @@ def call_ollama(prompt: str, json_mode: bool = False) -> Any:
         payload = {
             "model": MODEL_NAME,
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            "options": {
+                "num_predict": 600,   # Sane default for 5 questions
+                "temperature": 0.3    # Less thinking
+            }
         }
         
         if json_mode:
@@ -103,10 +107,31 @@ Text:
 {request.text}
 """
     data = call_ollama(prompt, json_mode=True)
-    # Fallback if AI returns list directly
+    
+    questions = []
     if isinstance(data, list):
-         return data
-    return data.get("questions", [])
+        questions = data
+    elif isinstance(data, dict):
+        questions = data.get("questions", [])
+
+    # Validate and clean questions
+    valid_questions = []
+    for q in questions:
+        if not isinstance(q, dict):
+            continue
+            
+        options = q.get("options")
+        if not isinstance(options, list) or len(options) < 2:
+            continue
+            
+        correct_index = q.get("correct_index")
+        if not isinstance(correct_index, int) or correct_index < 0 or correct_index >= len(options):
+            # Fix invalid index safely
+            q["correct_index"] = 0 
+            
+        valid_questions.append(q)
+
+    return valid_questions
 
 @app.post("/check-answers")
 def check_answers(request: CheckAnswersRequest):

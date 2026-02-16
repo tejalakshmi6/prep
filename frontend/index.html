@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Study Assistant</title>
+    <title>Study Buddy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -62,10 +62,10 @@
                     </path>
                 </svg>
             </div>
-            <h1 class="font-semibold text-lg tracking-tight text-white">AI Study Assistant</h1>
+            <h1 class="font-semibold text-lg tracking-tight text-white">Study Buddy</h1>
         </div>
         <div class="text-xs text-slate-500 font-medium px-3 py-1 bg-slate-900 rounded-full border border-slate-800">
-            Powered by Ollama (Phi)
+
         </div>
     </header>
 
@@ -391,8 +391,11 @@
                     const feedbackDiv = document.getElementById(`feedback-${index}`);
 
                     // Highlight correct
+                    // Highlight correct
                     const correctLabel = document.getElementById(`label-${index}-${correctAns}`);
-                    correctLabel.classList.add("bg-green-900/20", "border-green-500/50", "text-green-300");
+                    if (correctLabel) {
+                        correctLabel.classList.add("bg-green-900/20", "border-green-500/50", "text-green-300");
+                    }
 
                     if (userAns === correctAns) {
                         feedbackDiv.innerText = "Correct!";
@@ -403,7 +406,9 @@
 
                         if (userAns !== -1) {
                             const wrongLabel = document.getElementById(`label-${index}-${userAns}`);
-                            wrongLabel.classList.add("bg-red-900/20", "border-red-500/50", "text-red-300");
+                            if (wrongLabel) {
+                                wrongLabel.classList.add("bg-red-900/20", "border-red-500/50", "text-red-300");
+                            }
                         }
 
                         if (q.topic) weakTopics.push(q.topic);
